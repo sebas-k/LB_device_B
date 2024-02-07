@@ -9,6 +9,9 @@
 #include "freertos/queue.h"
 #include "driver/gptimer.h"
 #include "esp_log.h"
+#include "esp_wifi.h"
+#include "esp_now.h"
+#include "nvs_flash.h"
 
 //Pin configuration
 #define Red_LED GPIO_NUM_46 //Red LED, ON = LOW
@@ -16,20 +19,36 @@
 #define Blue_LED GPIO_NUM_45 //Blue LED, ON = LOW
 #define Yellow_LED GPIO_NUM_48 //Yellow LED, OFF = High
 #define IR_receiver_1 GPIO_NUM_21 //D10 (Arduino Nano ESP32 Layout)
+#define ESPNOW_WIFI_MODE WIFI_MODE_STA
+#define ESPNOW_WIFI_IF   ESP_IF_WIFI_STA
+#define CONFIG_ESPNOW_CHANNEL 5
 
 //Pin select
 #define LED_OUTPUT_PIN_SEL  ((1ULL<<Green_LED) | (1ULL<<Blue_LED) | (1ULL<<Red_LED) | (1ULL<<Yellow_LED))
 #define GPIO_INTERRUPT_PIN_SEL  ((1ULL<<IR_receiver_1))
 #define ESP_INTR_FLAG_DEFAULT 0
 
+//Meta data
+#define SYNC_DEVICES 0
+#define TIME_MEASURE 1
+
 //Global
 static const char *TAG = "LB_device_B";
 volatile bool reset_time_frame = false;
 volatile bool light_barrier_active = false;
+static uint8_t broadcastAddress[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+
 uint64_t ms = 0;
 typedef struct {
     uint64_t ms_count;
 } queue_timer_1ms_t;
+
+typedef struct PayLoad {
+    char meta_data;
+    int intVal_ms;
+} PayLoad;
+
+PayLoad myPayLoad; 
 
 void GPIO_config (void)
 {
@@ -61,6 +80,19 @@ void GPIO_interrupt_config (void){
     ESP_LOGI(TAG, "GPIO interrupt config - done");
 }
 
+static void app_wifi_init()
+{
+ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK( esp_wifi_init(&cfg) );
+    ESP_ERROR_CHECK( esp_wifi_set_storage(WIFI_STORAGE_RAM) );
+    ESP_ERROR_CHECK( esp_wifi_set_mode(ESPNOW_WIFI_MODE) );
+    ESP_ERROR_CHECK( esp_wifi_start());
+    ESP_ERROR_CHECK( esp_wifi_set_channel(CONFIG_ESPNOW_CHANNEL, WIFI_SECOND_CHAN_NONE));
+    ESP_ERROR_CHECK( esp_wifi_set_protocol(ESPNOW_WIFI_IF, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N|WIFI_PROTOCOL_LR) );
+}
+
 static void IRAM_ATTR IR_interrupt_isr_handler(void* arg)
 {
    reset_time_frame = true;
@@ -83,15 +115,28 @@ static bool IRAM_ATTR timer_1ms_on_alarm(gptimer_handle_t timer, const gptimer_a
     return (high_task_awoken == pdTRUE);// return whether we need to yield at the end of ISR
 }
 
+static void example_espnow_send_cb(const uint8_t *mac_addr, esp_now_send_status_t status)
+{
+ESP_LOGI(TAG, "Time sending - done");
+}
+
+static void example_espnow_recv_cb(const esp_now_recv_info_t *recv_info, const uint8_t *data, int len)
+{
+    memcpy(&myPayLoad, data, sizeof(myPayLoad));
+    if (myPayLoad.meta_data == SYNC_DEVICES){
+        ms = myPayLoad.intVal_ms * 1000; // that is not too nice
+    }
+    ESP_LOGI(TAG, "%llu", ms);
+}
+
 void app_main(void)
 {
-
+//
 queue_timer_1ms_t ele; //Create queue for Time Measurments
 QueueHandle_t queue_timer_1ms = xQueueCreate(10, sizeof(queue_timer_1ms_t));
 if (!queue_timer_1ms) {
     ESP_LOGE(TAG, "Creating queue failed");
-    return;
-}
+    return;}
 
 GPIO_config();
 GPIO_interrupt_config();
@@ -99,34 +144,51 @@ gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT); //Install interrupt isr service
 gpio_isr_handler_add(IR_receiver_1, IR_interrupt_isr_handler, (void*) IR_receiver_1); //Hook isr handler for TSOPs gpio pin
 ESP_LOGI(TAG, "IR_receiver_1 interrupt routine isr added - done");
 
-gptimer_handle_t gptimer_1ms = NULL;// Base Configuration 
-gptimer_config_t timer_config = { // .clk_src = GPTIMER_CLK_SRC_DEFAULT
+//Config Timer
+gptimer_handle_t gptimer_1ms = NULL;
+gptimer_config_t timer_config = { 
     .clk_src = GPTIMER_CLK_SRC_XTAL,
     .direction = GPTIMER_COUNT_UP,
-    .resolution_hz = 1000000,// 1MHz, 1 tick = 1us
-    };
-ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer_1ms)); //Create Timer
+    .resolution_hz = 1000000,};
+ESP_ERROR_CHECK(gptimer_new_timer(&timer_config, &gptimer_1ms));
 gptimer_event_callbacks_t cbs = {
-    .on_alarm = timer_1ms_on_alarm, //Set callback event kind and ISR (Interupt Service Routine)
-};
-ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer_1ms, &cbs, queue_timer_1ms)); //Register the callback
-ESP_LOGI(TAG, "Enable timer"); //Enable Timer
+    .on_alarm = timer_1ms_on_alarm, };
+ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer_1ms, &cbs, queue_timer_1ms)); 
 ESP_ERROR_CHECK(gptimer_enable(gptimer_1ms));
-gptimer_alarm_config_t alarm_config_1ms = { //Config the Alarm and start
+gptimer_alarm_config_t alarm_config_1ms = { 
     .reload_count = 0,
-    .alarm_count = 1000, //Period = 1ms
-    .flags.auto_reload_on_alarm = true,
-};   
-ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer_1ms, &alarm_config_1ms)); //Start and Enable finally
+    .alarm_count = 1000, 
+    .flags.auto_reload_on_alarm = true,};   
+ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer_1ms, &alarm_config_1ms));
+
+//Config ESP_Now
+ESP_LOGI(TAG, "Wifi Config");
+esp_err_t ret = nvs_flash_init();
+if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    ESP_ERROR_CHECK( nvs_flash_erase() );
+    ret = nvs_flash_init();}
+ESP_ERROR_CHECK( ret );
+app_wifi_init();
+esp_now_init();
+ESP_ERROR_CHECK( esp_now_register_send_cb(example_espnow_send_cb) );
+ESP_ERROR_CHECK( esp_now_register_recv_cb(example_espnow_recv_cb) );
+esp_now_peer_info_t peerInfo = {};
+memcpy(&peerInfo.peer_addr, broadcastAddress, 6);
+if(!esp_now_is_peer_exist(broadcastAddress))
+{
+    esp_now_add_peer(&peerInfo);}
+
+
 //ESP_ERROR_CHECK(gptimer_start(gptimer_1ms)); => erst nach dem Sync starten
-ESP_LOGI(TAG, "1ms Timer configured - done");
-ESP_LOGI(TAG, "Configuration done - device fully booted.");
 
 ESP_ERROR_CHECK(gptimer_start(gptimer_1ms));
 
 while (1) {
 //for ( int cnt = 1; cnt <= 10; cnt++) {
     if (xQueueReceive(queue_timer_1ms, &ele, portMAX_DELAY)) {
+        myPayLoad.meta_data = TIME_MEASURE;
+        myPayLoad.intVal_ms = ele.ms_count;
+        esp_now_send(broadcastAddress, (uint8_t *) &myPayLoad, sizeof(myPayLoad));
         ESP_LOGI(TAG, "MS since started the Timer %llu", ele.ms_count);
     }   
 }
