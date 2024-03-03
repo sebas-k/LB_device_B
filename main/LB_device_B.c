@@ -32,11 +32,24 @@
 #define SYNC_DEVICES 0
 #define TIME_MEASURE 1
 
+//LED Indicator
+#define RGB_on 0
+#define RGB_off 1
+volatile bool one_shot = 0;
+volatile bool LED_Indicator_Arr [6] = {1,1,1,1,1,1};
+
 //Global
 static const char *TAG = "LB_device_B";
 volatile bool reset_time_frame = false;
 volatile bool light_barrier_active = false;
+volatile char device_role = 0;
 static uint8_t broadcastAddress[ESP_NOW_ETH_ALEN] = { 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF };
+
+//Device Role status
+#define DEVICE_NOT_INITALIZED 0
+#define DEVICE_IS_TIMER_SYNC_MASTER 1
+#define DEVICE_IS_NOT_TIMER_SYNC_MASTER 2
+#define DEVICE_IS_IR_RECEIVER 3
 
 uint64_t ms = 0;
 typedef struct {
@@ -110,6 +123,7 @@ static bool IRAM_ATTR timer_1ms_on_alarm(gptimer_handle_t timer, const gptimer_a
         .ms_count = ms
         };
         xQueueSendFromISR(queue, &ele, &high_task_awoken);
+        one_shot = 1;
     }
     reset_time_frame = false;// insert else/if for the High Task Awoke
     return (high_task_awoken == pdTRUE);// return whether we need to yield at the end of ISR
@@ -124,14 +138,68 @@ static void example_espnow_recv_cb(const esp_now_recv_info_t *recv_info, const u
 {
     memcpy(&myPayLoad, data, sizeof(myPayLoad));
     if (myPayLoad.meta_data == SYNC_DEVICES){
-        ms = myPayLoad.intVal_ms * 1000; // that is not too nice
+        ms = myPayLoad.intVal_ms * 1000; // that is not too nice, rework
+        device_role = DEVICE_IS_IR_RECEIVER;
     }
     ESP_LOGI(TAG, "%llu", ms);
 }
 
+void ESPnow_config(){
+//Config ESP_Now
+ESP_LOGI(TAG, "Wifi Config");
+esp_err_t ret = nvs_flash_init();
+if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    ESP_ERROR_CHECK( nvs_flash_erase() );
+    ret = nvs_flash_init();}
+ESP_ERROR_CHECK( ret );
+app_wifi_init();
+esp_now_init();
+ESP_ERROR_CHECK( esp_now_register_send_cb(example_espnow_send_cb) );
+ESP_ERROR_CHECK( esp_now_register_recv_cb(example_espnow_recv_cb) );
+esp_now_peer_info_t peerInfo = {};
+memcpy(&peerInfo.peer_addr, broadcastAddress, 6);
+if(!esp_now_is_peer_exist(broadcastAddress))
+{
+    esp_now_add_peer(&peerInfo);}
+}
+
+void LED_Indicator_Task(void *params) {
+char count = 0;
+
+while (1){
+
+if (one_shot){
+    gpio_set_level (Red_LED, 0); 
+    gpio_set_level (Green_LED, 1); 
+    gpio_set_level (Blue_LED, 1);
+    vTaskDelay(250 / portTICK_PERIOD_MS);
+    count = 11;
+    one_shot = 0;
+}
+
+switch (count) {
+    case 1:
+    gpio_set_level (Red_LED, LED_Indicator_Arr[0]); 
+    gpio_set_level (Green_LED, LED_Indicator_Arr[1]); 
+    gpio_set_level (Blue_LED, LED_Indicator_Arr[2]);
+    break;
+    case 11:
+    gpio_set_level (Red_LED, LED_Indicator_Arr[3]); 
+    gpio_set_level (Green_LED, LED_Indicator_Arr[4]); 
+    gpio_set_level (Blue_LED, LED_Indicator_Arr[5]); 
+    break;
+    case 20:
+    count = 0;
+    break;
+}
+vTaskDelay(100 / portTICK_PERIOD_MS);
+count++;
+}
+}
+
 void app_main(void)
 {
-//
+
 queue_timer_1ms_t ele; //Create queue for Time Measurments
 QueueHandle_t queue_timer_1ms = xQueueCreate(10, sizeof(queue_timer_1ms_t));
 if (!queue_timer_1ms) {
@@ -140,9 +208,14 @@ if (!queue_timer_1ms) {
 
 GPIO_config();
 GPIO_interrupt_config();
+
 gpio_install_isr_service(ESP_INTR_FLAG_DEFAULT); //Install interrupt isr service routinne
 gpio_isr_handler_add(IR_receiver_1, IR_interrupt_isr_handler, (void*) IR_receiver_1); //Hook isr handler for TSOPs gpio pin
 ESP_LOGI(TAG, "IR_receiver_1 interrupt routine isr added - done");
+
+LED_Indicator_Arr [0] = RGB_off; LED_Indicator_Arr [1] = RGB_off; LED_Indicator_Arr [2] = RGB_on;
+LED_Indicator_Arr [3] = RGB_off; LED_Indicator_Arr [4] = RGB_off; LED_Indicator_Arr [5] = RGB_off;
+xTaskCreatePinnedToCore(LED_Indicator_Task, "LED_Indicator_Task", 2048, NULL, 1, NULL, 0);
 
 //Config Timer
 gptimer_handle_t gptimer_1ms = NULL;
@@ -160,31 +233,37 @@ gptimer_alarm_config_t alarm_config_1ms = {
     .alarm_count = 1000, 
     .flags.auto_reload_on_alarm = true,};   
 ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer_1ms, &alarm_config_1ms));
-
-//Config ESP_Now
-ESP_LOGI(TAG, "Wifi Config");
-esp_err_t ret = nvs_flash_init();
-if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-    ESP_ERROR_CHECK( nvs_flash_erase() );
-    ret = nvs_flash_init();}
-ESP_ERROR_CHECK( ret );
-app_wifi_init();
-esp_now_init();
-ESP_ERROR_CHECK( esp_now_register_send_cb(example_espnow_send_cb) );
-ESP_ERROR_CHECK( esp_now_register_recv_cb(example_espnow_recv_cb) );
-esp_now_peer_info_t peerInfo = {};
-memcpy(&peerInfo.peer_addr, broadcastAddress, 6);
-if(!esp_now_is_peer_exist(broadcastAddress))
-{
-    esp_now_add_peer(&peerInfo);}
-
-
-//ESP_ERROR_CHECK(gptimer_start(gptimer_1ms)); => erst nach dem Sync starten
-
 ESP_ERROR_CHECK(gptimer_start(gptimer_1ms));
 
+ESPnow_config();
+
+vTaskDelay(5500 / portTICK_PERIOD_MS); //Wait till a sync is received
+
+while (device_role == DEVICE_NOT_INITALIZED) {
+    vTaskDelay(100 / portTICK_PERIOD_MS);
+}
+
+switch (device_role)
+{
+case DEVICE_IS_TIMER_SYNC_MASTER:
+    LED_Indicator_Arr [0] = RGB_on; LED_Indicator_Arr [1] = RGB_on; LED_Indicator_Arr [2] = RGB_on;
+    LED_Indicator_Arr [3] = RGB_on; LED_Indicator_Arr [4] = RGB_on; LED_Indicator_Arr [5] = RGB_on;
+    ESP_LOGI(TAG, "Device is Timer Sync Master");
+    break;
+case DEVICE_IS_NOT_TIMER_SYNC_MASTER:
+    ESP_LOGI(TAG, "Device is NOT Timer Sync Master");
+    LED_Indicator_Arr [0] = RGB_off; LED_Indicator_Arr [1] = RGB_on; LED_Indicator_Arr [2] = RGB_off;
+    LED_Indicator_Arr [3] = RGB_off; LED_Indicator_Arr [4] = RGB_on; LED_Indicator_Arr [5] = RGB_off;
+    break;
+case DEVICE_IS_IR_RECEIVER:
+    ESP_LOGI(TAG, "Device is NOT Timer Sync Master");
+    LED_Indicator_Arr [0] = RGB_off; LED_Indicator_Arr [1] = RGB_on; LED_Indicator_Arr [2] = RGB_off;
+    LED_Indicator_Arr [3] = RGB_off; LED_Indicator_Arr [4] = RGB_on; LED_Indicator_Arr [5] = RGB_off;
+    break;
+}
+
+
 while (1) {
-//for ( int cnt = 1; cnt <= 10; cnt++) {
     if (xQueueReceive(queue_timer_1ms, &ele, portMAX_DELAY)) {
         myPayLoad.meta_data = TIME_MEASURE;
         myPayLoad.intVal_ms = ele.ms_count;
