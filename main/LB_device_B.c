@@ -264,7 +264,8 @@ case DEVICE_IS_IR_RECEIVER:
 
 
 while (1) {
-    if (xQueueReceive(queue_timer_1ms, &ele, portMAX_DELAY)) {
+    vTaskDelay(200 / portTICK_PERIOD_MS); //if not all Device start at the exact exact time there will be no culliosn
+    if (xQueueReceive(queue_timer_1ms, &ele, 10 / portTICK_PERIOD_MS)) {
         myPayLoad.meta_data = TIME_MEASURE;
         myPayLoad.intVal_ms = ele.ms_count;
         esp_now_send(broadcastAddress, (uint8_t *) &myPayLoad, sizeof(myPayLoad));
