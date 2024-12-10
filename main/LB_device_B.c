@@ -14,17 +14,16 @@
 #include "nvs_flash.h"
 
 //Pin configuration
-#define Red_LED GPIO_NUM_46 //Red LED, ON = LOW
-#define Green_LED GPIO_NUM_0 //Green LED, ON = LOW
-#define Blue_LED GPIO_NUM_45 //Blue LED, ON = LOW
-#define Yellow_LED GPIO_NUM_48 //Yellow LED, OFF = High
+#define Red_LED GPIO_NUM_40 //Red LED, ON = LOW
+#define Green_LED GPIO_NUM_41 //Green LED, ON = LOW
+#define Blue_LED GPIO_NUM_42 //Blue LED, ON = LOW
 #define IR_receiver_1 GPIO_NUM_21 //D10 (Arduino Nano ESP32 Layout)
 #define ESPNOW_WIFI_MODE WIFI_MODE_STA
 #define ESPNOW_WIFI_IF   ESP_IF_WIFI_STA
 #define CONFIG_ESPNOW_CHANNEL 5
 
 //Pin select
-#define LED_OUTPUT_PIN_SEL  ((1ULL<<Green_LED) | (1ULL<<Blue_LED) | (1ULL<<Red_LED) | (1ULL<<Yellow_LED))
+#define LED_OUTPUT_PIN_SEL  ((1ULL<<Green_LED) | (1ULL<<Blue_LED) | (1ULL<<Red_LED))
 #define GPIO_INTERRUPT_PIN_SEL  ((1ULL<<IR_receiver_1))
 #define ESP_INTR_FLAG_DEFAULT 0
 
@@ -65,6 +64,11 @@ PayLoad myPayLoad;
 
 void GPIO_config (void)
 {
+
+gpio_set_level (Red_LED, 1); //OFF
+gpio_set_level (Green_LED, 1); //OFF
+gpio_set_level (Blue_LED, 1); //OFF
+
 gpio_config_t led_io_conf = {
     .intr_type = GPIO_INTR_DISABLE,
     .mode = GPIO_MODE_OUTPUT,
@@ -77,13 +81,12 @@ gpio_config_t led_io_conf = {
     gpio_set_level (Red_LED, 1); //OFF
     gpio_set_level (Green_LED, 1); //OFF
     gpio_set_level (Blue_LED, 1); //OFF
-    gpio_set_level (Yellow_LED, 1); //ON
     ESP_LOGI(TAG, "GPIO LED config - done");
 }
 
 void GPIO_interrupt_config (void){
     gpio_config_t inter_io_conf = {
-    .intr_type = GPIO_INTR_NEGEDGE,
+    .intr_type = GPIO_INTR_ANYEDGE,  // GPIO_INTR_NEGEDGE 1/10 ms change test
     .mode = GPIO_MODE_INPUT,
     .pin_bit_mask = GPIO_INTERRUPT_PIN_SEL,
     .pull_down_en = 0,
@@ -230,7 +233,7 @@ ESP_ERROR_CHECK(gptimer_register_event_callbacks(gptimer_1ms, &cbs, queue_timer_
 ESP_ERROR_CHECK(gptimer_enable(gptimer_1ms));
 gptimer_alarm_config_t alarm_config_1ms = { 
     .reload_count = 0,
-    .alarm_count = 1000, 
+    .alarm_count = 5000, // 1/2 ms change test
     .flags.auto_reload_on_alarm = true,};   
 ESP_ERROR_CHECK(gptimer_set_alarm_action(gptimer_1ms, &alarm_config_1ms));
 ESP_ERROR_CHECK(gptimer_start(gptimer_1ms));
@@ -256,7 +259,7 @@ case DEVICE_IS_NOT_TIMER_SYNC_MASTER:
     LED_Indicator_Arr [3] = RGB_off; LED_Indicator_Arr [4] = RGB_on; LED_Indicator_Arr [5] = RGB_off;
     break;
 case DEVICE_IS_IR_RECEIVER:
-    ESP_LOGI(TAG, "Device is NOT Timer Sync Master");
+    ESP_LOGI(TAG, "DEVICE_IS_IR_RECEIV");
     LED_Indicator_Arr [0] = RGB_off; LED_Indicator_Arr [1] = RGB_on; LED_Indicator_Arr [2] = RGB_off;
     LED_Indicator_Arr [3] = RGB_off; LED_Indicator_Arr [4] = RGB_on; LED_Indicator_Arr [5] = RGB_off;
     break;
@@ -269,7 +272,7 @@ while (1) {
         myPayLoad.meta_data = TIME_MEASURE;
         myPayLoad.intVal_ms = ele.ms_count;
         esp_now_send(broadcastAddress, (uint8_t *) &myPayLoad, sizeof(myPayLoad));
-        ESP_LOGI(TAG, "MS since started the Timer %llu", ele.ms_count);
+        ESP_LOGI(TAG, "1/10 MS since started the Timer %llu", ele.ms_count); // 1/2 ms change test
     }   
 }
 }

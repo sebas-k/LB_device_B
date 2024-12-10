@@ -1,0 +1,137 @@
+[0;32mI (123) esp_image: segment 1: paddr=00030838 vaddr=3fc971ESP-ROM:esp32s3-20210327
+Build:Mar 27 2021
+rst:0x15 (USB_UART_CHIP_RESET),boot:0x8 (SPI_FAST_FLASH_BOOT)
+Saved PC:0x42007e80
+SPIWP:0xee
+mode:DIO, clock div:1
+load:0x3fce3818,len:0x16e0
+load:0x403c9700,len:0x4
+load:0x403c9704,len:0xc00
+load:0x403cc700,len:0x2eb0
+entry 0x403c9908
+[0;32mI (27) boot: ESP-IDF v5.1.1 2nd stage bootloader[0m
+[0;32mI (27) boot: compile time Jan 30 2024 15:17:47[0m
+[0;32mI (27) boot: Multicore bootloader[0m
+[0;32mI (30) boot: chip revision: v0.2[0m
+[0;32mI (34) boot.esp32s3: Boot SPI Speed : 80MHz[0m
+[0;32mI (38) boot.esp32s3: SPI Mode       : DIO[0m
+[0;32mI (43) boot.esp32s3: SPI Flash Size : 2MB[0m
+[0;32mI (48) boot: Enabling RNG early entropy source...[0m
+[0;32mI (53) boot: Partition Table:[0m
+[0;32mI (57) boot: ## Label            Usage          Type ST Offset   Length[0m
+[0;32mI (64) boot:  0 nvs              WiFi data        01 02 00009000 00006000[0m
+[0;32mI (72) boot:  1 phy_init         RF data          01 01 0000f000 00001000[0m
+[0;32mI (79) boot:  2 factory          factory app      00 00 00010000 00100000[0m
+[0;32mI (87) boot: End of partition table[0m
+[0;32mI (91) esp_image: segment 0: paddr=00010020 vaddr=3c080020 size=20810h (133136) map[0m
+[0;32mI (123) esp_image: segment 1: paddr=00030838 vaddr=3fc97100 size=043e4h ( 17380) load[0m
+[0;32mI (127) esp_image: segment 2: paddr=00034c24 vaddr=40374000 size=0b3f4h ( 46068) load[0m
+[0;32mI (139) esp_image: segment 3: paddr=00040020 vaddr=42000020 size=7af14h (503572) map[0m
+[0;32mI (230) esp_image: segment 4: paddr=000baf3c vaddr=4037f3f4 size=07ce8h ( 31976) load[0m
+[0;32mI (245) boot: Loaded app from partition at offset 0x10000[0m
+[0;32mI (246) boot: Disabling RNG early entropy source...[0m
+[0;32mI (257) cpu_start: Multicore app[0m
+[0;32mI (257) cpu_start: Pro cpu up.[0m
+[0;32mI (257) cpu_start: Starting app cpu, entry point is 0x4037549c[0m
+[0;32mI (0) cpu_start: App cpu up.[0m
+[0;32mI (276) cpu_start: Pro cpu start user code[0m
+[0;32mI (276) cpu_start: cpu freq: 160000000 Hz[0m
+[0;32mI (276) cpu_start: Application information:[0m
+[0;32mI (279) cpu_start: Project name:     LB_device_B[0m
+[0;32mI (284) cpu_start: App version:      1[0m
+[0;32mI (288) cpu_start: Compile time:     Jan 30 2024 15:16:32[0m
+[0;32mI (294) cpu_start: ELF file SHA256:  e8af3512a3181b33...[0m
+[0;32mI (300) cpu_start: ESP-IDF:          v5.1.1[0m
+[0;32mI (305) cpu_start: Min chip rev:     v0.0[0m
+[0;32mI (310) cpu_start: Max chip rev:     v0.99 [0m
+[0;32mI (315) cpu_start: Chip rev:         v0.2[0m
+[0;32mI (320) heap_init: Initializing. RAM available for dynamic allocation:[0m
+[0;32mI (327) heap_init: At 3FC9EF00 len 0004A810 (298 KiB): DRAM[0m
+[0;32mI (333) heap_init: At 3FCE9710 len 00005724 (21 KiB): STACK/DRAM[0m
+[0;32mI (340) heap_init: At 3FCF0000 len 00008000 (32 KiB): DRAM[0m
+[0;32mI (346) heap_init: At 600FE010 len 00001FD8 (7 KiB): RTCRAM[0m
+[0;32mI (353) spi_flash: detected chip: gd[0m
+[0;32mI (356) spi_flash: flash io: dio[0m
+[0;33mW (360) spi_flash: Detected size(16384k) larger than the size in the binary image header(2048k). Using the size in the binary image header.[0m
+[0;32mI (374) sleep: Configure to isolate all GPIO pins in sleep state[0m
+[0;32mI (380) sleep: Enable automatic switching of GPIO sleep configuration[0m
+[0;32mI (388) app_start: Starting scheduler on CPU0[0m
+[0;32mI (392) app_start: Starting scheduler on CPU1[0m
+[0;32mI (392) main_task: Started on CPU0[0m
+[0;32mI (402) main_task: Calling app_main()[0m
+[0;32mI (402) gpio: GPIO[40]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 [0m
+[0;32mI (412) gpio: GPIO[41]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 [0m
+[0;32mI (422) gpio: GPIO[42]| InputEn: 0| OutputEn: 1| OpenDrain: 0| Pullup: 0| Pulldown: 0| Intr:0 [0m
+[0;32mI (432) LB_device_B: GPIO LED config - done[0m
+[0;32mI (442) gpio: GPIO[21]| InputEn: 1| OutputEn: 0| OpenDrain: 0| Pullup: 1| Pulldown: 0| Intr:3 [0m
+[0;32mI (452) LB_device_B: GPIO interrupt config - done[0m
+[0;32mI (452) LB_device_B: IR_receiver_1 interrupt routine isr added - done[0m
+[0;32mI (462) LB_device_B: Wifi Config[0m
+[0;32mI (482) pp: pp rom version: e7ae62f[0m
+[0;32mI (482) net80211: net80211 rom version: e7ae62f[0m
+I (492) wifi:wifi driver task: 3fca9858, prio:23, stack:6656, core=0
+I (492) wifi:wifi firmware version: ce9244d
+I (492) wifi:wifi certification version: v7.0
+I (492) wifi:config NVS flash: enabled
+I (492) wifi:config nano formating: disabled
+I (502) wifi:Init data frame dynamic rx buffer num: 32
+I (502) wifi:Init management frame dynamic rx buffer num: 32
+I (512) wifi:Init management short buffer num: 32
+I (512) wifi:Init dynamic tx buffer num: 32
+I (522) wifi:Init static tx FG buffer num: 2
+I (522) wifi:Init static rx buffer size: 1600
+I (522) wifi:Init static rx buffer num: 10
+I (532) wifi:Init dynamic rx buffer num: 32
+[0;32mI (532) wifi_init: rx ba win: 6[0m
+[0;32mI (542) wifi_init: tcpip mbox: 32[0m
+[0;32mI (542) wifi_init: udp mbox: 6[0m
+[0;32mI (542) wifi_init: tcp mbox: 6[0m
+[0;32mI (552) wifi_init: tcp tx win: 5744[0m
+[0;32mI (552) wifi_init: tcp rx win: 5744[0m
+[0;32mI (562) wifi_init: tcp mss: 1440[0m
+[0;32mI (562) wifi_init: WiFi IRAM OP enabled[0m
+[0;32mI (562) wifi_init: WiFi RX IRAM OP enabled[0m
+[0;32mI (572) phy_init: phy_version 601,98f2a71,Jun 29 2023,09:58:12[0m
+I (612) wifi:mode : sta (dc:da:0c:47:a7:18)
+I (622) wifi:enable tsf
+I (622) wifi:ifx:0, phymode(new:0x3, nvs:0x3)
+I (622) wifi:enable tsf
+I (622) ESPNOW: espnow [version: 1.0] init
+[0;32mI (2212) LB_device_B: 795000[0m
+[0;32mI (6122) LB_device_B: DEVICE_IS_IR_RECEIV[0m
+[0;32mI (6322) LB_device_B: 1/10 MS since started the Timer 2[0m
+[0;32mI (6322) LB_device_B: Time sending - done[0m
+[0;32mI (6522) LB_device_B: 1/10 MS since started the Timer 5[0m
+[0;32mI (6522) LB_device_B: Time sending - done[0m
+[0;32mI (6722) LB_device_B: 1/10 MS since started the Timer 8[0m
+[0;32mI (6722) LB_device_B: Time sending - done[0m
+[0;32mI (6922) LB_device_B: 1/10 MS since started the Timer 12[0m
+[0;32mI (6922) LB_device_B: Time sending - done[0m
+[0;32mI (7122) LB_device_B: 1/10 MS since started the Timer 16[0m
+[0;32mI (7122) LB_device_B: Time sending - done[0m
+[0;32mI (7212) LB_device_B: 800000[0m
+[0;32mI (7322) LB_device_B: 1/10 MS since started the Timer 20[0m
+[0;32mI (7322) LB_device_B: Time sending - done[0m
+[0;32mI (7522) LB_device_B: 1/10 MS since started the Timer 23[0m
+[0;32mI (7522) LB_device_B: Time sending - done[0m
+[0;32mI (7722) LB_device_B: 1/10 MS since started the Timer 27[0m
+[0;32mI (7722) LB_device_B: Time sending - done[0m
+[0;32mI (7922) LB_device_B: 1/10 MS since started the Timer 30[0m
+[0;32mI (7922) LB_device_B: Time sending - done[0m
+[0;32mI (8122) LB_device_B: 1/10 MS since started the Timer 34[0m
+[0;32mI (8122) LB_device_B: Time sending - done[0m
+[0;32mI (8322) LB_device_B: 1/10 MS since started the Timer 836010[0m
+[0;32mI (8322) LB_device_B: Time sending - done[0m
+[0;32mI (8522) LB_device_B: 1/10 MS since started the Timer 838012[0m
+[0;32mI (8522) LB_device_B: Time sending - done[0m
+[0;32mI (8722) LB_device_B: 1/10 MS since started the Timer 840010[0m
+[0;32mI (8722) LB_device_B: Time sending - done[0m
+[0;32mI (8922) LB_device_B: 1/10 MS since started the Timer 842012[0m
+[0;32mI (8922) LB_device_B: Time sending - done[0m
+[0;32mI (9122) LB_device_B: 1/10 MS since started the Timer 844009[0m
+[0;32mI (9122) LB_device_B: Time sending - done[0m
+[0;32mI (9322) LB_device_B: 1/10 MS since started the Timer 801025[0m
+[0;32mI (9322) LB_device_B: Time sending - done[0m
+[0;32mI (9522) LB_device_B: 1/10 MS since started the Timer 803023[0m
+[0;32mI (9522) LB_device_B: Time sending - done[0m
+[0;32mI (9722) L
